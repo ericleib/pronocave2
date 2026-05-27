@@ -9,22 +9,66 @@
 <section class="panel rules">
   <h2>Phase de groupes</h2>
   <ul>
-    <li><strong>3 points</strong> pour le score exact.</li>
-    <li><strong>2 points</strong> pour le bon résultat sans score exact : victoire A, nul, ou victoire B.</li>
-    <li><strong>0 point</strong> sinon.</li>
+    <li><strong>+2</strong> pour le bon résultat : équipe A, équipe B, ou nul.</li>
+    <li><strong>+3</strong> pour le bon résultat et la bonne différence de buts, par exemple 2-1 prévu et 4-3 réel. Cette règle ne s'applique pas aux nuls.</li>
+    <li><strong>+4</strong> pour le bon résultat et le score exact.</li>
   </ul>
 
-  <h2>Finales</h2>
+  <h2>Premier tour des finales</h2>
+  <p>Toutes les équipes sont connues.</p>
   <ul>
-    <li><strong>3 points</strong> pour le bon vainqueur.</li>
-    <li><strong>+2 points</strong> si les deux équipes du match sont correctement prédites, sauf pour la finale.</li>
-    <li><strong>+2 points</strong> de plus pour le score exact, sauf pour la finale.</li>
-    <li><strong>Finale :</strong> 7 points pour le champion, +5 points pour les deux finalistes exacts, +5 points pour le score exact.</li>
-    <li>En finales, les équipes doivent être confirmées par l'admin avant que le match soit pronostiquable.</li>
-    <li>Tu peux entrer un score nul en finales. Dans ce cas, tu ne pronostiques pas le qualifié : si le vrai match est aussi nul avec les bonnes équipes, tu marques <strong>2 points</strong>, plus <strong>2 points</strong> si le score exact est bon.</li>
+    <li>Si le bon vainqueur est prévu :
+      <ul>
+        <li><strong>+3</strong> pour le bon vainqueur.</li>
+        <li><strong>+5</strong> pour le bon vainqueur et la bonne différence de buts.</li>
+        <li><strong>+6</strong> pour le bon vainqueur et le score exact.</li>
+      </ul>
+    </li>
+    <li>Sinon, si le match est nul :
+      <ul>
+        <li><strong>+3</strong> pour avoir prévu un nul.</li>
+        <li><strong>+5</strong> pour avoir prévu un nul avec le score exact.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Tours suivants des finales</h2>
+  <ul>
+    <li>Si le bon vainqueur est prévu :
+      <ul>
+        <li><strong>+3</strong> pour le bon vainqueur.</li>
+        <li><strong>+5</strong> pour le bon vainqueur et le bon perdant.</li>
+        <li><strong>+7</strong> pour le bon vainqueur, le bon perdant, et la bonne différence de buts.</li>
+        <li><strong>+8</strong> pour le bon vainqueur, le bon perdant, et le score exact.</li>
+      </ul>
+    </li>
+    <li>Sinon, si le match est nul :
+      <ul>
+        <li><strong>+5</strong> pour avoir prévu un nul avec les bonnes équipes.</li>
+        <li><strong>+7</strong> pour avoir prévu un nul avec les bonnes équipes et le score exact.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Finale</h2>
+  <ul>
+    <li>Si le bon vainqueur est prévu :
+      <ul>
+        <li><strong>+8</strong> pour le bon vainqueur.</li>
+        <li><strong>+12</strong> pour le bon vainqueur et le bon perdant.</li>
+        <li><strong>+16</strong> pour le bon vainqueur, le bon perdant, et la bonne différence de buts.</li>
+        <li><strong>+20</strong> pour le bon vainqueur, le bon perdant, et le score exact.</li>
+      </ul>
+    </li>
+    <li>Sinon, si le match est nul :
+      <ul>
+        <li><strong>+12</strong> pour avoir prévu un nul avec les bonnes équipes.</li>
+        <li><strong>+16</strong> pour avoir prévu un nul avec les bonnes équipes et le score exact.</li>
+      </ul>
+    </li>
   </ul>
 
   <h2>Bonus</h2>
-  <p>Le bonus affiché dans le classement compte les très bons pronos : score exact en groupes, au moins 5 points en seizièmes, et au moins 7 points à partir des tours suivants.</p>
+  <p>Le bonus affiché dans le classement compte uniquement les meilleurs pronostics possibles : score exact en groupes, score exact au premier tour des finales, score exact dans les tours suivants, et score exact en finale.</p>
 </section>
 <%- include("partials/footer") %>

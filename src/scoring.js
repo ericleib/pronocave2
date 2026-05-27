@@ -5,9 +5,9 @@ function winnerSide(scoreA, scoreB) {
 }
 
 const KNOCKOUT_POINTS = {
-  round32: { winner: 3, teams: 0, exactScore: 2 },
-  final: { winner: 7, teams: 5, exactScore: 5 },
-  default: { winner: 3, teams: 2, exactScore: 2 },
+  round32: { winner: 3, goalDifference: 5, exactScore: 6, draw: 3, drawExactScore: 5 },
+  final: { winner: 8, teams: 12, goalDifference: 16, exactScore: 20, draw: 12, drawExactScore: 16 },
+  default: { winner: 3, teams: 5, goalDifference: 7, exactScore: 8, draw: 5, drawExactScore: 7 },
 };
 
 function knockoutPoints(round) {
@@ -24,12 +24,48 @@ function betWinnerTeam(bet) {
   return bet.winner_side === "A" ? bet.team_a_id : bet.team_b_id;
 }
 
-function sameTeams(match, bet) {
-  return Number(bet.team_a_id) === Number(match.team_a_id) && Number(bet.team_b_id) === Number(match.team_b_id);
+function sameTeamSet(match, bet) {
+  const actual = [match.team_a_id, match.team_b_id].map(Number).sort((a, b) => a - b);
+  const predicted = [bet.team_a_id, bet.team_b_id].map(Number).sort((a, b) => a - b);
+  return actual[0] === predicted[0] && actual[1] === predicted[1];
 }
 
 function exactScore(match, bet) {
   return Number(match.score_a) === Number(bet.score_a) && Number(match.score_b) === Number(bet.score_b);
+}
+
+function goalDifference(match, bet) {
+  return Number(match.score_a) - Number(match.score_b) === Number(bet.score_a) - Number(bet.score_b);
+}
+
+function scoreForTeam(item, teamId) {
+  if (Number(item.team_a_id) === Number(teamId)) return Number(item.score_a);
+  if (Number(item.team_b_id) === Number(teamId)) return Number(item.score_b);
+  return null;
+}
+
+function loserTeam(item, winnerTeamId) {
+  if (Number(item.team_a_id) === Number(winnerTeamId)) return item.team_b_id;
+  if (Number(item.team_b_id) === Number(winnerTeamId)) return item.team_a_id;
+  return null;
+}
+
+function goalDifferenceByWinner(match, bet, actualWinnerTeam, actualLoserTeam) {
+  const actualWinnerScore = scoreForTeam(match, actualWinnerTeam);
+  const actualLoserScore = scoreForTeam(match, actualLoserTeam);
+  const betWinnerScore = scoreForTeam(bet, actualWinnerTeam);
+  const betLoserScore = scoreForTeam(bet, actualLoserTeam);
+  if ([actualWinnerScore, actualLoserScore, betWinnerScore, betLoserScore].some((score) => score === null)) return false;
+  return actualWinnerScore - actualLoserScore === betWinnerScore - betLoserScore;
+}
+
+function exactScoreByTeams(match, bet, actualWinnerTeam, actualLoserTeam) {
+  const actualWinnerScore = scoreForTeam(match, actualWinnerTeam);
+  const actualLoserScore = scoreForTeam(match, actualLoserTeam);
+  const betWinnerScore = scoreForTeam(bet, actualWinnerTeam);
+  const betLoserScore = scoreForTeam(bet, actualLoserTeam);
+  if ([actualWinnerScore, actualLoserScore, betWinnerScore, betLoserScore].some((score) => score === null)) return false;
+  return actualWinnerScore === betWinnerScore && actualLoserScore === betLoserScore;
 }
 
 function isScoredStatus(status) {
@@ -41,22 +77,35 @@ function scoreBet(match, bet) {
   const actualWinner = winnerSide(match.score_a, match.score_b);
 
   if (match.round === "group") {
-    if (exactScore(match, bet)) return 3;
+    if (exactScore(match, bet)) return 4;
+    if (actualWinner === bet.winner_side && actualWinner !== "even" && goalDifference(match, bet)) return 3;
     return actualWinner === bet.winner_side ? 2 : 0;
   }
 
   const actualWinnerTeam = winnerTeam(match, actualWinner);
   const predictedWinnerTeam = betWinnerTeam(bet);
-  const hasSameTeams = sameTeams(match, bet);
-  const hasExactScore = exactScore(match, bet);
+  const hasSameTeamSet = sameTeamSet(match, bet);
+  const points = knockoutPoints(match.round);
 
   if (predictedWinnerTeam && actualWinnerTeam && Number(predictedWinnerTeam) === Number(actualWinnerTeam)) {
-    const points = knockoutPoints(match.round);
-    return points.winner + (hasSameTeams ? points.teams : 0) + (hasSameTeams && hasExactScore ? points.exactScore : 0);
+    const actualLoserTeam = loserTeam(match, actualWinnerTeam);
+    if (match.round === "round32") {
+      if (exactScoreByTeams(match, bet, actualWinnerTeam, actualLoserTeam)) return points.exactScore;
+      if (goalDifferenceByWinner(match, bet, actualWinnerTeam, actualLoserTeam)) return points.goalDifference;
+      return points.winner;
+    }
+
+    if (hasSameTeamSet) {
+      if (exactScoreByTeams(match, bet, actualWinnerTeam, actualLoserTeam)) return points.exactScore;
+      if (goalDifferenceByWinner(match, bet, actualWinnerTeam, actualLoserTeam)) return points.goalDifference;
+      return points.teams;
+    }
+    return points.winner;
   }
 
-  if (actualWinner === "even" && bet.winner_side === "even" && hasSameTeams) {
-    return 2 + (hasExactScore ? 2 : 0);
+  if (actualWinner === "even" && bet.winner_side === "even") {
+    if (match.round === "round32") return exactScore(match, bet) ? points.drawExactScore : points.draw;
+    if (hasSameTeamSet) return exactScore(match, bet) ? points.drawExactScore : points.draw;
   }
 
   return 0;

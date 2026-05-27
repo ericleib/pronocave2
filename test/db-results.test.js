@@ -75,12 +75,12 @@ test("saveResult stores live results and recomputes provisional leaderboard poin
   assert.equal(store.betFor(matchId, userId).points, null);
 
   store.saveResult({ matchId, status: "live", scoreA: 1, scoreB: 0 });
-  assert.equal(store.betFor(matchId, userId).points, 2);
-  assert.equal(store.leaderboard(tournamentId).find((row) => row.id === userId).score, 2);
-
-  store.saveResult({ matchId, status: "live", scoreA: 2, scoreB: 1 });
   assert.equal(store.betFor(matchId, userId).points, 3);
   assert.equal(store.leaderboard(tournamentId).find((row) => row.id === userId).score, 3);
+
+  store.saveResult({ matchId, status: "live", scoreA: 2, scoreB: 1 });
+  assert.equal(store.betFor(matchId, userId).points, 4);
+  assert.equal(store.leaderboard(tournamentId).find((row) => row.id === userId).score, 4);
 });
 
 test("leaderboard exposes bet counts so inactive users can be hidden after phase zero", () => {
@@ -113,6 +113,115 @@ test("renameUser changes display names and rejects duplicates", () => {
   assert.throws(() => store.renameUser(firstUserId, "rename-target"), /déjà utilisé/);
 });
 
+test("banned users are preserved but hidden from leaderboard and active user count", () => {
+  const tournamentId = createTournament();
+  const teamA = createTeam(tournamentId, "France");
+  const teamB = createTeam(tournamentId, "Suisse");
+  const matchId = createMatch(tournamentId, {
+    matchNo: 7,
+    round: "group",
+    teamAId: teamA,
+    teamBId: teamB,
+  });
+  const userId = createUser("banned-better");
+  const match = store.get("SELECT * FROM matches WHERE id = ?", [matchId]);
+
+  store.saveBet({ tournamentId, match, userId, scoreA: 1, scoreB: 0, teamAId: teamA, teamBId: teamB });
+  assert.ok(store.leaderboard(tournamentId).some((row) => row.id === userId));
+
+  const usersBeforeBan = store.stats(tournamentId).users;
+  store.setUserBanned(userId, true);
+  assert.equal(store.userById(userId).banned, 1);
+  assert.equal(store.betFor(matchId, userId).score_a, 1);
+  assert.equal(store.leaderboard(tournamentId).some((row) => row.id === userId), false);
+  assert.equal(store.stats(tournamentId).users, usersBeforeBan - 1);
+
+  store.setUserBanned(userId, false);
+  assert.ok(store.leaderboard(tournamentId).some((row) => row.id === userId));
+});
+
+test("clearTournamentBets deletes only bets from the selected tournament", () => {
+  const tournamentId = createTournament();
+  const otherTournamentId = createTournament();
+  const userId = createUser("clear-bets-user");
+  const teamA = createTeam(tournamentId, "France");
+  const teamB = createTeam(tournamentId, "Italie");
+  const otherTeamA = createTeam(otherTournamentId, "Espagne");
+  const otherTeamB = createTeam(otherTournamentId, "Portugal");
+  const matchId = createMatch(tournamentId, { matchNo: 8, round: "group", teamAId: teamA, teamBId: teamB });
+  const otherMatchId = createMatch(otherTournamentId, { matchNo: 9, round: "group", teamAId: otherTeamA, teamBId: otherTeamB });
+
+  store.saveBet({
+    tournamentId,
+    match: store.get("SELECT * FROM matches WHERE id = ?", [matchId]),
+    userId,
+    scoreA: 1,
+    scoreB: 0,
+    teamAId: teamA,
+    teamBId: teamB,
+  });
+  store.saveBet({
+    tournamentId: otherTournamentId,
+    match: store.get("SELECT * FROM matches WHERE id = ?", [otherMatchId]),
+    userId,
+    scoreA: 2,
+    scoreB: 0,
+    teamAId: otherTeamA,
+    teamBId: otherTeamB,
+  });
+
+  store.clearTournamentBets(tournamentId);
+  assert.equal(store.betFor(matchId, userId), undefined);
+  assert.equal(store.betFor(otherMatchId, userId).score_a, 2);
+});
+
+test("resetTournamentMatches clears results and derived teams while preserving seeded teams", () => {
+  const tournamentId = createTournament();
+  const teamA = createTeam(tournamentId, "Argentine");
+  const teamB = createTeam(tournamentId, "Mexique");
+  const teamC = createTeam(tournamentId, "Allemagne");
+  const firstMatchId = createMatch(tournamentId, {
+    matchNo: 50,
+    round: "round32",
+    teamAId: teamA,
+    teamBId: teamB,
+  });
+  const childMatchId = createMatch(tournamentId, {
+    matchNo: 60,
+    round: "round16",
+    teamBId: teamC,
+    sourceAMatchNo: 50,
+    sourceAOutcome: "winner",
+  });
+  const userId = createUser("reset-user");
+
+  store.saveResult({ matchId: firstMatchId, status: "final", scoreA: 2, scoreB: 0 });
+  store.saveBet({
+    tournamentId,
+    match: store.get("SELECT * FROM matches WHERE id = ?", [firstMatchId]),
+    userId,
+    scoreA: 2,
+    scoreB: 0,
+    teamAId: teamA,
+    teamBId: teamB,
+  });
+  assert.equal(store.betFor(firstMatchId, userId).points, 6);
+  assert.equal(store.get("SELECT team_a_id FROM matches WHERE id = ?", [childMatchId]).team_a_id, teamA);
+
+  store.resetTournamentMatches(tournamentId);
+  const firstMatch = store.get("SELECT * FROM matches WHERE id = ?", [firstMatchId]);
+  const childMatch = store.get("SELECT * FROM matches WHERE id = ?", [childMatchId]);
+
+  assert.equal(firstMatch.team_a_id, teamA);
+  assert.equal(firstMatch.team_b_id, teamB);
+  assert.equal(firstMatch.status, "scheduled");
+  assert.equal(firstMatch.score_a, null);
+  assert.equal(childMatch.team_a_id, null);
+  assert.equal(childMatch.team_b_id, teamC);
+  assert.equal(childMatch.status, "scheduled");
+  assert.equal(store.betFor(firstMatchId, userId).points, null);
+});
+
 test("changing a final knockout winner clears dependent results and propagates the new team", () => {
   const tournamentId = createTournament();
   const teamA = createTeam(tournamentId, "France");
@@ -141,7 +250,7 @@ test("changing a final knockout winner clears dependent results and propagates t
   let childMatch = store.get("SELECT * FROM matches WHERE id = ?", [childMatchId]);
   store.saveBet({ tournamentId, match: childMatch, userId, scoreA: 2, scoreB: 0, teamAId: teamA, teamBId: teamC });
   store.saveResult({ matchId: childMatchId, status: "final", scoreA: 2, scoreB: 0 });
-  assert.equal(store.betFor(childMatchId, userId).points, 7);
+  assert.equal(store.betFor(childMatchId, userId).points, 8);
 
   store.saveResult({ matchId: firstMatchId, status: "final", scoreA: 0, scoreB: 1 });
   childMatch = store.get("SELECT * FROM matches WHERE id = ?", [childMatchId]);

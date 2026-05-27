@@ -326,6 +326,7 @@ Important constraints/invariants:
 
 - `bets` has `UNIQUE(match_id, user_id)`.
 - `message_likes` has `PRIMARY KEY (message_id, user_id)` so a user cannot like a post twice.
+- `users.banned` disables login and removes the player from active counts/leaderboards without deleting account data, bets, messages, or likes.
 - For finals bets, `bets.team_a_id` and `bets.team_b_id` are the teams the user predicted for that slot, not necessarily the real/admin teams.
 - Do not delete user bets just because the admin later sets/changes finals teams. Existing bets must remain visible so wrong predicted teams can be shown in red and scored partially.
 - `assignMatchTeam()` recalculates affected points but intentionally preserves bets.
@@ -334,6 +335,7 @@ Important constraints/invariants:
 - `final` scores are authoritative: they recompute points and may resolve downstream bracket teams.
 - `clearResult()` must clear downstream match teams/results and recalculate downstream points to avoid stale leaderboard scores.
 - `saveResult()` also has to clear downstream teams/results when a previously final knockout result changes winner, loser, or is downgraded back to `live`/`scheduled`.
+- Admin maintenance actions are intentionally destructive but tournament-scoped: `clearTournamentBets()` deletes only bets for the current tournament, while `resetTournamentMatches()` clears scores/statuses/derived teams and recalculates points without deleting bets.
 
 ## Seed Data And Future Tournaments
 
@@ -382,17 +384,19 @@ Scoring lives in `src/scoring.js`.
 
 Groups:
 
-- exact score: 3 points;
+- exact score: 4 points;
+- correct outcome and goal difference on non-draws: 3 points;
 - correct outcome only: 2 points;
 - otherwise 0.
 
 Finals:
 
-- `round32`: 3 for correct winner, +2 for exact score when teams match.
-- later rounds except final: 3 for correct winner, +2 if both teams match, +2 if score also matches.
-- final: 7 for champion, +5 for exact finalists, +5 for exact score.
+- `round32`: 3 for correct qualified team, 5 with goal difference, 6 with exact score.
+- later rounds except final: 3 for correct qualified team, 5 with correct winner and loser, 7 with goal difference, 8 with exact score.
+- final: 8 for champion, 12 with correct finalist, 16 with goal difference, 20 with exact score.
 - tie scores in finals use `winner_team_id` to determine the qualified team.
-- There is a compatibility case for real tied finals bets: if both actual and bet are ties with same teams but wrong qualified team, score is 2 plus 2 for exact tied score.
+- Tie fallback if the qualified team is wrong: `round32` gives 3 for predicting a draw or 5 with exact score; later rounds give 5 or 7 with exact score when teams are correct; the final gives 12 or 16 with exact score when teams are correct.
+- The leaderboard bonus counts only the best possible prediction for a match: 4 in groups, 6 in `round32`, 8 in later knockout rounds, and 20 in the final.
 
 `updatePointsForMatch()` recalculates stored bet points for one match. Admin result/team changes must call it for affected matches.
 

@@ -25,12 +25,32 @@
     <h2>Joueurs</h2>
     <div class="admin-inline-form">
       <select name="user_id">
-        <% users.forEach((user) => { %><option value="<%= user.id %>"><%= user.login %></option><% }) %>
+        <% users.forEach((user) => { %><option value="<%= user.id %>"><%= user.login %><%= user.banned ? " (désactivé)" : "" %></option><% }) %>
       </select>
       <input name="login" type="text" placeholder="Nouveau nom" required>
       <button class="btn" type="submit"><i data-lucide="check"></i>OK</button>
     </div>
+    <div class="admin-user-list">
+      <% users.forEach((user) => { %>
+        <div class="admin-user-row">
+          <span><%= user.login %><% if (user.banned) { %> <em>Désactivé</em><% } %></span>
+          <form method="post" action="<%= base %>/admin/users/<%= user.id %>/ban">
+            <input type="hidden" name="banned" value="<%= user.banned ? 0 : 1 %>">
+            <button class="btn small <%= user.banned ? "" : "danger" %>" type="submit"><i data-lucide="<%= user.banned ? "undo-2" : "ban" %>"></i><%= user.banned ? "Réactiver" : "Désactiver" %></button>
+          </form>
+        </div>
+      <% }) %>
+    </div>
   </form>
+  <section class="panel form-stack" id="maintenance">
+    <h2>Maintenance</h2>
+    <form method="post" action="<%= base %>/admin/bets/clear" class="confirm-form" data-confirm-title="Supprimer les pronos ?" data-confirm-text="Tous les pronos du tournoi <%= tournament.short_name %> seront supprimés. Les comptes et messages seront conservés.">
+      <button class="btn danger" type="submit"><i data-lucide="trash-2"></i>Supprimer les pronos</button>
+    </form>
+    <form method="post" action="<%= base %>/admin/matches/reset" class="confirm-form" data-confirm-title="Réinitialiser les matchs ?" data-confirm-text="Tous les scores, statuts live/terminé, vainqueurs et équipes dérivées du tournoi <%= tournament.short_name %> seront remis à zéro. Les pronos seront conservés mais ne rapporteront plus de points.">
+      <button class="btn danger" type="submit"><i data-lucide="rotate-ccw"></i>Réinitialiser les matchs</button>
+    </form>
+  </section>
 </section>
 
 <section class="panel" id="teams">
@@ -103,4 +123,37 @@
     <% }) %>
   </div>
 </section>
+<dialog class="confirm-dialog" id="admin-confirm-dialog">
+  <form method="dialog">
+    <h2 id="confirm-title">Confirmer</h2>
+    <p id="confirm-text"></p>
+    <div class="inline-actions">
+      <button class="btn" value="cancel">Annuler</button>
+      <button class="btn danger" value="confirm">Confirmer</button>
+    </div>
+  </form>
+</dialog>
+<script>
+  (() => {
+    const dialog = document.querySelector("#admin-confirm-dialog");
+    const title = document.querySelector("#confirm-title");
+    const text = document.querySelector("#confirm-text");
+    let pendingForm = null;
+    for (const form of document.querySelectorAll(".confirm-form")) {
+      form.addEventListener("submit", (event) => {
+        if (form.dataset.confirmed === "true") return;
+        event.preventDefault();
+        pendingForm = form;
+        title.textContent = form.dataset.confirmTitle || "Confirmer";
+        text.textContent = form.dataset.confirmText || "";
+        dialog.showModal();
+      });
+    }
+    dialog.addEventListener("close", () => {
+      if (dialog.returnValue !== "confirm" || !pendingForm) return;
+      pendingForm.dataset.confirmed = "true";
+      pendingForm.submit();
+    });
+  })();
+</script>
 <%- include("partials/footer") %>

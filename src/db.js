@@ -133,6 +133,7 @@ function migrate() {
   addColumnIfMissing("matches", "external_last_sync", "TEXT");
   addColumnIfMissing("matches", "winner_team_id", "INTEGER REFERENCES teams(id)");
   addColumnIfMissing("bets", "winner_team_id", "INTEGER REFERENCES teams(id)");
+  addColumnIfMissing("users", "banned", "INTEGER NOT NULL DEFAULT 0");
 }
 
 function addColumnIfMissing(table, column, definition) {
@@ -322,7 +323,7 @@ function userByLogin(login) {
 }
 
 function userById(id) {
-  return get("SELECT id, login, email, role FROM users WHERE id = ?", [id]);
+  return get("SELECT id, login, email, role, banned FROM users WHERE id = ?", [id]);
 }
 
 function createUser({ login, password, email }) {
@@ -330,7 +331,7 @@ function createUser({ login, password, email }) {
 }
 
 function users() {
-  return all("SELECT id, login, role FROM users ORDER BY login COLLATE NOCASE");
+  return all("SELECT id, login, role, banned FROM users ORDER BY login COLLATE NOCASE");
 }
 
 function renameUser(userId, login) {
@@ -339,6 +340,10 @@ function renameUser(userId, login) {
   const duplicate = get("SELECT id FROM users WHERE lower(login) = lower(?) AND id != ?", [nextLogin, userId]);
   if (duplicate) throw new Error("Ce nom est déjà utilisé.");
   return run("UPDATE users SET login = ? WHERE id = ?", [nextLogin, userId]);
+}
+
+function setUserBanned(userId, banned) {
+  return run("UPDATE users SET banned = ? WHERE id = ?", [banned ? 1 : 0, userId]);
 }
 
 function teamsForTournament(tournamentId) {
@@ -394,14 +399,16 @@ function leaderboard(tournamentId) {
             COUNT(b.id) AS bet_count,
             COALESCE(SUM(CASE WHEN b.points IS NOT NULL THEN b.points ELSE 0 END), 0) AS score,
             COALESCE(SUM(CASE
-              WHEN m.round = 'group' AND b.points = 3 THEN 1
-              WHEN m.round = 'round32' AND b.points >= 5 THEN 1
-              WHEN m.round != 'group' AND m.round != 'round32' AND b.points >= 7 THEN 1
+              WHEN m.round = 'group' AND b.points = 4 THEN 1
+              WHEN m.round = 'round32' AND b.points = 6 THEN 1
+              WHEN m.round != 'group' AND m.round != 'round32' AND m.round != 'final' AND b.points = 8 THEN 1
+              WHEN m.round = 'final' AND b.points = 20 THEN 1
               ELSE 0
             END), 0) AS bonus
      FROM users u
      LEFT JOIN bets b ON b.user_id = u.id AND b.tournament_id = ?
      LEFT JOIN matches m ON m.id = b.match_id
+     WHERE u.banned = 0
      GROUP BY u.id
      ORDER BY score DESC, bonus DESC, u.login ASC`,
     [tournamentId],
@@ -410,7 +417,7 @@ function leaderboard(tournamentId) {
 
 function stats(tournamentId) {
   return {
-    users: get("SELECT COUNT(*) AS n FROM users").n,
+    users: get("SELECT COUNT(*) AS n FROM users WHERE banned = 0").n,
     bets: get("SELECT COUNT(*) AS n FROM bets WHERE tournament_id = ?", [tournamentId]).n,
     done: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status = 'final'", [tournamentId]).n,
     live: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status = 'live'", [tournamentId]).n,
@@ -442,6 +449,31 @@ function recordMatchExternalSync(matchId, { provider, eventId, syncedAt = new Da
      WHERE id = ?`,
     [provider, eventId || null, syncedAt.toISOString(), matchId],
   );
+}
+
+function clearTournamentBets(tournamentId) {
+  return run("DELETE FROM bets WHERE tournament_id = ?", [tournamentId]);
+}
+
+function resetTournamentMatches(tournamentId) {
+  run(
+    `UPDATE matches
+     SET team_a_id = CASE WHEN round = 'group' OR source_a_match_no IS NULL THEN team_a_id ELSE NULL END,
+         team_b_id = CASE WHEN round = 'group' OR source_b_match_no IS NULL THEN team_b_id ELSE NULL END,
+         score_a = NULL,
+         score_b = NULL,
+         winner_team_id = NULL,
+         penalties = 0,
+         status = 'scheduled',
+         external_provider = NULL,
+         external_event_id = NULL,
+         external_last_sync = NULL
+     WHERE tournament_id = ?`,
+    [tournamentId],
+  );
+  for (const match of all("SELECT id FROM matches WHERE tournament_id = ?", [tournamentId])) {
+    updatePointsForMatch(match.id);
+  }
 }
 
 function saveBet({ tournamentId, match, userId, scoreA, scoreB, teamAId, teamBId, winnerTeamId = null }) {
@@ -695,6 +727,7 @@ module.exports = {
   createUser,
   users,
   renameUser,
+  setUserBanned,
   teamsForTournament,
   matchesForTournament,
   betFor,
@@ -705,6 +738,8 @@ module.exports = {
   stats,
   scoreSyncCandidates,
   recordMatchExternalSync,
+  clearTournamentBets,
+  resetTournamentMatches,
   saveBet,
   saveBetWinner,
   assignMatchTeam,

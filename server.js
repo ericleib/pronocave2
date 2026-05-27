@@ -36,7 +36,12 @@ function slugFromPath(req) {
 
 function attachContext(req, res, next) {
   const tournament = store.activeTournament(slugFromPath(req));
-  const user = req.session.userId ? store.userById(req.session.userId) : null;
+  let user = req.session.userId ? store.userById(req.session.userId) : null;
+  if (user?.banned) {
+    req.session.userId = null;
+    req.session.flash = { type: "error", text: "Ce compte est désactivé." };
+    user = null;
+  }
   if (tournament) req.session.tournamentSlug = tournament.slug;
   res.locals.currentUser = user;
   res.locals.tournament = tournament;
@@ -155,7 +160,7 @@ app.get(["/index.php", "/main_page.php"], (req, res) => res.redirect(targetUrl(r
 app.get("/login", (req, res) => res.render("login"));
 app.post("/login", (req, res) => {
   const user = store.userByLogin(req.body.login || "");
-  if (!user || !verifyPassword(req.body.password || req.body.pass || "", user.password_hash)) {
+  if (!user || user.banned || !verifyPassword(req.body.password || req.body.pass || "", user.password_hash)) {
     flash(req, "error", "Login ou mot de passe incorrect.");
     return res.redirect("/login");
   }
@@ -452,6 +457,29 @@ app.post("/:slug/admin/users/rename", requireAdmin, (req, res) => {
     flash(req, "error", error.message);
   }
   res.redirect(`${targetUrl(req, "/admin")}#users`);
+});
+
+app.post("/:slug/admin/users/:userId/ban", requireAdmin, (req, res) => {
+  const userId = Number(req.params.userId);
+  if (userId === res.locals.currentUser.id) {
+    flash(req, "error", "Impossible de désactiver ton propre compte.");
+  } else {
+    store.setUserBanned(userId, Number(req.body.banned) === 1);
+    flash(req, "success", Number(req.body.banned) === 1 ? "Joueur désactivé." : "Joueur réactivé.");
+  }
+  res.redirect(`${targetUrl(req, "/admin")}#users`);
+});
+
+app.post("/:slug/admin/bets/clear", requireAdmin, (req, res) => {
+  store.clearTournamentBets(res.locals.tournament.id);
+  flash(req, "success", "Tous les pronos du tournoi ont été supprimés.");
+  res.redirect(`${targetUrl(req, "/admin")}#maintenance`);
+});
+
+app.post("/:slug/admin/matches/reset", requireAdmin, (req, res) => {
+  store.resetTournamentMatches(res.locals.tournament.id);
+  flash(req, "success", "Tous les matchs du tournoi ont été réinitialisés.");
+  res.redirect(`${targetUrl(req, "/admin")}#maintenance`);
 });
 
 app.post("/:slug/admin/teams/:matchId/:side", requireAdmin, (req, res) => {
