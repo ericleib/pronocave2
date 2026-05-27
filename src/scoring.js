@@ -32,8 +32,12 @@ function exactScore(match, bet) {
   return Number(match.score_a) === Number(bet.score_a) && Number(match.score_b) === Number(bet.score_b);
 }
 
+function isScoredStatus(status) {
+  return status === "live" || status === "final";
+}
+
 function scoreBet(match, bet) {
-  if (!match || !bet || match.status !== "final") return null;
+  if (!match || !bet || !isScoredStatus(match.status)) return null;
   const actualWinner = winnerSide(match.score_a, match.score_b);
 
   if (match.round === "group") {
@@ -58,4 +62,4 @@ function scoreBet(match, bet) {
   return 0;
 }
 
-module.exports = { KNOCKOUT_POINTS, scoreBet, winnerSide };
+module.exports = { KNOCKOUT_POINTS, isScoredStatus, scoreBet, winnerSide };

@@ -1,4 +1,4 @@
-<%- include("partials/header", { title: "Accueil" }) %>
+<%- include("partials/header", { title: "Classement" }) %>
 <section class="page-title">
   <div>
     <p class="eyebrow"><%= phaseLabel(tournament.phase) %></p>
@@ -7,8 +7,9 @@
   <div class="quick-stats">
     <span><strong><%= stats.users %></strong> joueurs</span>
     <span><strong><%= stats.bets %></strong> pronos</span>
+    <span><strong><%= stats.live %></strong> en cours</span>
     <span><strong><%= stats.done %></strong> terminés</span>
-    <span><strong><%= stats.upcoming %></strong> a venir</span>
+    <span><strong><%= stats.upcoming %></strong> à venir</span>
   </div>
 </section>
 
@@ -43,6 +44,25 @@
       <dt>Groupes</dt><dd><%= formatDate(tournament.group_bet_deadline) %></dd>
       <dt>Finales</dt><dd><%= formatDate(tournament.knockout_bet_deadline) %></dd>
     </dl>
+    <% if (liveMatches.length) { %>
+      <div class="live-score-list">
+        <h3>En cours</h3>
+        <% liveMatches.forEach((match) => { %>
+          <article class="live-score-card">
+            <div>
+              <strong><%= match.team_a_name || match.source_a_text %></strong>
+              <span class="muted">vs</span>
+              <strong><%= match.team_b_name || match.source_b_text %></strong>
+              <small>Match <%= match.match_no %> · <%= match.kickoff_label %></small>
+            </div>
+            <div>
+              <strong><%= match.score_a %> - <%= match.score_b %></strong>
+              <small><%= match.totalPoints %> pts</small>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    <% } %>
   </aside>
 </section>
 

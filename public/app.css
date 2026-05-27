@@ -440,6 +440,11 @@ textarea {
   background: #f0fbf6;
 }
 
+.match-row.live {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
 .winner-team {
   font-weight: 900;
 }
@@ -762,9 +767,61 @@ textarea {
   padding: 9px 12px;
 }
 
-.admin-result {
+.live-score-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.live-score-list h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.live-score-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  padding: 10px;
+}
+
+.live-score-card div:first-child {
   display: flex;
   flex-wrap: wrap;
+  gap: 3px 5px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.live-score-card div:first-child small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
+.live-score-card div:last-child {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: right;
+}
+
+.live-score-card div:last-child small {
+  color: var(--muted);
+}
+
+.admin-match-row {
+  grid-template-columns: minmax(220px, 1fr) minmax(520px, auto) auto;
+}
+
+.admin-result {
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: end;
   gap: 7px;
@@ -772,12 +829,24 @@ textarea {
 
 .admin-result select {
   width: auto;
+  min-width: 64px;
+}
+
+.admin-result select[name="status"] {
+  min-width: 116px;
+}
+
+.admin-result select[name="winner_team_id"],
+.admin-team-picks .admin-result select {
+  max-width: 210px;
 }
 
 .admin-team-picks {
-  display: grid;
+  display: flex;
+  flex-wrap: nowrap;
   gap: 7px;
-  justify-items: end;
+  justify-content: end;
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
@@ -797,6 +866,12 @@ textarea {
   .match-prono {
     justify-items: start;
     text-align: left;
+  }
+
+  .admin-result,
+  .admin-team-picks {
+    flex-wrap: wrap;
+    justify-content: start;
   }
 
   .user-tools,

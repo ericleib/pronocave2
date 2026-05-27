@@ -329,7 +329,11 @@ Important constraints/invariants:
 - For finals bets, `bets.team_a_id` and `bets.team_b_id` are the teams the user predicted for that slot, not necessarily the real/admin teams.
 - Do not delete user bets just because the admin later sets/changes finals teams. Existing bets must remain visible so wrong predicted teams can be shown in red and scored partially.
 - `assignMatchTeam()` recalculates affected points but intentionally preserves bets.
+- Match status is one of `scheduled`, `live`, or `final`.
+- `live` scores are provisional: they recompute points and leaderboard totals, but they must not advance real/admin teams through the bracket.
+- `final` scores are authoritative: they recompute points and may resolve downstream bracket teams.
 - `clearResult()` must clear downstream match teams/results and recalculate downstream points to avoid stale leaderboard scores.
+- `saveResult()` also has to clear downstream teams/results when a previously final knockout result changes winner, loser, or is downgraded back to `live`/`scheduled`.
 
 ## Seed Data And Future Tournaments
 
@@ -391,6 +395,8 @@ Finals:
 - There is a compatibility case for real tied finals bets: if both actual and bet are ties with same teams but wrong qualified team, score is 2 plus 2 for exact tied score.
 
 `updatePointsForMatch()` recalculates stored bet points for one match. Admin result/team changes must call it for affected matches.
+
+Only `live` and `final` matches produce points. `scheduled` matches leave `bets.points` as `NULL`. This lets admins update live scores in real time and see the leaderboard move without making the bracket consume provisional winners.
 
 ## Autosave Betting UI
 

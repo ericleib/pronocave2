@@ -7,6 +7,7 @@ const { scoreBet, winnerSide } = require("./scoring");
 const root = path.join(__dirname, "..");
 const dataDir = path.join(root, "data");
 const dbPath = process.env.DATABASE_URL || path.join(dataDir, "pronocave.sqlite");
+const MATCH_STATUSES = new Set(["scheduled", "live", "final"]);
 
 fs.mkdirSync(dataDir, { recursive: true });
 
@@ -387,7 +388,8 @@ function stats(tournamentId) {
     users: get("SELECT COUNT(*) AS n FROM users").n,
     bets: get("SELECT COUNT(*) AS n FROM bets WHERE tournament_id = ?", [tournamentId]).n,
     done: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status = 'final'", [tournamentId]).n,
-    upcoming: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status != 'final'", [tournamentId]).n,
+    live: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status = 'live'", [tournamentId]).n,
+    upcoming: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status = 'scheduled'", [tournamentId]).n,
     messages: get("SELECT COUNT(*) AS n FROM messages WHERE tournament_id = ?", [tournamentId]).n,
   };
 }
@@ -471,6 +473,45 @@ function loserTeamId(match) {
   return null;
 }
 
+function normalizeMatchStatus(status) {
+  const normalized = status || "final";
+  if (!MATCH_STATUSES.has(normalized)) throw new Error("Statut de match invalide.");
+  return normalized;
+}
+
+function normalizeScore(value) {
+  if (value === undefined || value === null || value === "") throw new Error("Score invalide.");
+  const score = Number(value);
+  if (!Number.isInteger(score) || score < 0 || score > 99) throw new Error("Score invalide.");
+  return score;
+}
+
+function finalOutcome(match) {
+  return {
+    winnerId: winnerTeamId(match) || null,
+    loserId: loserTeamId(match) || null,
+  };
+}
+
+function outcomeChanged(before, after) {
+  return Number(before.winnerId || 0) !== Number(after.winnerId || 0) || Number(before.loserId || 0) !== Number(after.loserId || 0);
+}
+
+function clearDescendantMatches(tournamentId, matchNo) {
+  for (const child of descendantMatchNos(tournamentId, matchNo)) {
+    const childMatch = get("SELECT id FROM matches WHERE tournament_id = ? AND match_no = ?", [tournamentId, child]);
+    run(
+      `UPDATE matches
+       SET team_a_id = CASE WHEN source_a_match_no IS NULL THEN team_a_id ELSE NULL END,
+           team_b_id = CASE WHEN source_b_match_no IS NULL THEN team_b_id ELSE NULL END,
+           score_a = NULL, score_b = NULL, penalties = 0, winner_team_id = NULL, status = 'scheduled'
+       WHERE tournament_id = ? AND match_no = ?`,
+      [tournamentId, child],
+    );
+    if (childMatch) updatePointsForMatch(childMatch.id);
+  }
+}
+
 function resolveKnockoutTeams(tournamentId) {
   const matches = matchesForTournament(tournamentId);
   const byNo = new Map(matches.map((match) => [match.match_no, match]));
@@ -513,39 +554,65 @@ function assignMatchTeam({ matchId, side, teamId }) {
   }
 }
 
-function saveResult({ matchId, scoreA, scoreB, teamAId, teamBId, winnerTeamId = null }) {
+function saveResult({ matchId, scoreA, scoreB, teamAId, teamBId, winnerTeamId = null, status = "final" }) {
   const match = get("SELECT * FROM matches WHERE id = ?", [matchId]);
+  if (!match) throw new Error("Match introuvable.");
+  const nextStatus = normalizeMatchStatus(status);
+
+  if (nextStatus === "scheduled") {
+    clearResult(matchId);
+    return;
+  }
+
   const nextTeamA = teamAId || match.team_a_id;
   const nextTeamB = teamBId || match.team_b_id;
-  const winner = winnerSide(scoreA, scoreB);
-  const nextWinnerTeamId = winner === "even" ? winnerTeamId : null;
+  const nextScoreA = normalizeScore(scoreA);
+  const nextScoreB = normalizeScore(scoreB);
+  const winner = winnerSide(nextScoreA, nextScoreB);
+  const nextWinnerTeamId = winner === "even" && winnerTeamId ? Number(winnerTeamId) : null;
+  const nextMatch = {
+    ...match,
+    status: nextStatus,
+    team_a_id: nextTeamA,
+    team_b_id: nextTeamB,
+    score_a: nextScoreA,
+    score_b: nextScoreB,
+    winner_team_id: nextWinnerTeamId,
+  };
+
+  if (nextStatus === "final" && match.round !== "group" && winner === "even" && !nextWinnerTeamId) {
+    throw new Error("Choisis le vainqueur qualifié.");
+  }
+  if (
+    nextWinnerTeamId &&
+    ![Number(nextTeamA || 0), Number(nextTeamB || 0)].includes(Number(nextWinnerTeamId))
+  ) {
+    throw new Error("Le vainqueur qualifié doit être une des deux équipes du match.");
+  }
+
+  const oldOutcome = finalOutcome(match);
+  const nextOutcome = finalOutcome(nextMatch);
+  const shouldClearDescendants =
+    match.round !== "group" && match.status === "final" && (nextStatus !== "final" || outcomeChanged(oldOutcome, nextOutcome));
+
   run(
     `UPDATE matches
-     SET score_a = ?, score_b = ?, penalties = 0, winner_team_id = ?, status = 'final',
+     SET score_a = ?, score_b = ?, penalties = 0, winner_team_id = ?, status = ?,
          team_a_id = COALESCE(?, team_a_id), team_b_id = COALESCE(?, team_b_id)
      WHERE id = ?`,
-    [scoreA, scoreB, nextWinnerTeamId, nextTeamA, nextTeamB, matchId],
+    [nextScoreA, nextScoreB, nextWinnerTeamId, nextStatus, nextTeamA, nextTeamB, matchId],
   );
   updatePointsForMatch(matchId);
-  resolveKnockoutTeams(match.tournament_id);
+  if (shouldClearDescendants) clearDescendantMatches(match.tournament_id, match.match_no);
+  if (nextStatus === "final") resolveKnockoutTeams(match.tournament_id);
 }
 
 function clearResult(matchId) {
   const match = get("SELECT * FROM matches WHERE id = ?", [matchId]);
+  if (!match) return;
   run("UPDATE matches SET score_a = NULL, score_b = NULL, penalties = 0, winner_team_id = NULL, status = 'scheduled' WHERE id = ?", [matchId]);
   updatePointsForMatch(matchId);
-  for (const child of descendantMatchNos(match.tournament_id, match.match_no)) {
-    const childMatch = get("SELECT id FROM matches WHERE tournament_id = ? AND match_no = ?", [match.tournament_id, child]);
-    run(
-      `UPDATE matches
-       SET team_a_id = CASE WHEN source_a_match_no IS NULL THEN team_a_id ELSE NULL END,
-           team_b_id = CASE WHEN source_b_match_no IS NULL THEN team_b_id ELSE NULL END,
-           score_a = NULL, score_b = NULL, penalties = 0, winner_team_id = NULL, status = 'scheduled'
-       WHERE tournament_id = ? AND match_no = ?`,
-      [match.tournament_id, child],
-    );
-    if (childMatch) updatePointsForMatch(childMatch.id);
-  }
+  clearDescendantMatches(match.tournament_id, match.match_no);
 }
 
 function updatePointsForMatch(matchId) {

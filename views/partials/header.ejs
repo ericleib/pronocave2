@@ -20,10 +20,10 @@
     </a>
     <% if (currentUser) { %>
       <nav class="main-nav">
-        <a class="<%= sectionPath === "/" ? "active" : "" %>" href="<%= base %>"><i data-lucide="trophy"></i><span>Accueil</span></a>
-        <a class="rules-link <%= sectionPath === "/rules" ? "active" : "" %>" href="<%= base %>/rules"><i data-lucide="book-open"></i><span>Règles</span></a>
+        <a class="<%= sectionPath === "/" ? "active" : "" %>" href="<%= base %>"><i data-lucide="trophy"></i><span>Classement</span></a>
         <a class="<%= sectionPath.startsWith("/bets") ? "active" : "" %>" href="<%= base %>/pronos"><i data-lucide="grid-3x3"></i><span>Pronos</span></a>
         <a class="<%= sectionPath === "/matches" ? "active" : "" %>" href="<%= base %>/matches"><i data-lucide="calendar-days"></i><span>Matchs</span></a>
+        <a class="rules-link <%= sectionPath === "/rules" ? "active" : "" %>" href="<%= base %>/rules"><i data-lucide="book-open"></i><span>Règles</span></a>
         <% if (currentUser.role === "admin") { %>
           <a class="<%= sectionPath === "/admin" ? "active" : "" %>" href="<%= base %>/admin"><i data-lucide="settings"></i><span>Admin</span></a>
         <% } %>

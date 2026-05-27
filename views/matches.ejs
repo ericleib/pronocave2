@@ -7,6 +7,50 @@
 </section>
 
 <div class="stack">
+  <% if (liveMatches.length) { %>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Matchs en cours</h2>
+      <span><%= liveMatches.length %> matchs</span>
+    </div>
+    <div class="match-list">
+      <% liveMatches.forEach((match) => {
+        const userBetTeams = match.userBet
+          ? `${match.userBet.bet_team_a_name || match.team_a_name || match.source_a_text} vs ${match.userBet.bet_team_b_name || match.team_b_name || match.source_b_text}`
+          : "";
+        const hasMismatch = match.userTeamAMismatch || match.userTeamBMismatch;
+      %>
+        <article class="match-row live">
+          <div class="match-main">
+            <span class="tag">En cours</span>
+            <span class="tag"><%= match.round_label %></span>
+            <div class="match-teams">
+              <strong class="<%= match.actualWinnerSide === "A" || match.actualWinnerSide === "even" ? "winner-team" : "" %>"><%= match.team_a_name || match.source_a_text %></strong>
+              <span class="muted">vs</span>
+              <strong class="<%= match.actualWinnerSide === "B" || match.actualWinnerSide === "even" ? "winner-team" : "" %>"><%= match.team_b_name || match.source_b_text %></strong>
+            </div>
+            <small>Match <%= match.match_no %> · <%= match.kickoff_label %> · <%= match.venue %></small>
+          </div>
+          <div class="match-score">
+            <small>Score live</small>
+            <strong><%= match.score_a %> - <%= match.score_b %></strong>
+            <span><%= match.totalPoints %> pts provisoires</span>
+          </div>
+          <div class="match-prono">
+            <small>Mon prono</small>
+            <% if (match.userBet) { %>
+              <strong class="prono-score <%= hasMismatch ? "mismatch" : "" %>" title="<%= hasMismatch ? `Équipes pronostiquées : ${userBetTeams}` : "" %>"><%= match.userBet.score_a %> - <%= match.userBet.score_b %></strong>
+              <% if (match.userBet.points !== null && match.userBet.points !== undefined) { %><span><%= match.userBet.points > 0 ? `+${match.userBet.points}` : "0" %> pt<%= Math.abs(match.userBet.points) > 1 ? "s" : "" %></span><% } %>
+            <% } else { %>
+              <span class="reason-badge">Pas de prono</span>
+            <% } %>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+  <% } %>
+
   <section class="panel">
     <div class="panel-head">
       <h2>Matchs terminés</h2>

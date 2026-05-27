@@ -35,6 +35,12 @@ test("group scoring rewards exact score, then only correct outcome", () => {
   assert.equal(scoreBet(match, bet({ score_a: 1, score_b: 2, winner_side: "B" })), 0);
 });
 
+test("live matches produce provisional points while scheduled matches do not", () => {
+  const match = finalMatch({ round: "group", status: "live", score_a: 1, score_b: 0 });
+  assert.equal(scoreBet(match, bet({ score_a: 2, score_b: 1, winner_side: "A" })), 2);
+  assert.equal(scoreBet({ ...match, status: "scheduled" }, bet({ score_a: 2, score_b: 1, winner_side: "A" })), null);
+});
+
 test("round of 32 scoring rewards winner and exact score only when teams match", () => {
   const match = finalMatch({ round: "round32" });
   assert.equal(scoreBet(match, bet({ score_a: 1, score_b: 0 })), 3);

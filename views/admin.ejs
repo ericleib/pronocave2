@@ -27,7 +27,7 @@
   <div class="panel-head"><h2>Équipes des finales</h2><span><%= matches.filter((m) => m.round !== "group").length %> matchs</span></div>
   <div class="match-list compact">
     <% matches.filter((match) => match.round !== "group").forEach((match) => { %>
-      <div class="match-row">
+      <div class="match-row admin-match-row">
         <div>
           <span class="tag"><%= match.round_label %></span>
           <strong><%= match.source_a_text %></strong>
@@ -60,7 +60,7 @@
   <div class="panel-head"><h2>Résultats</h2><span><%= matches.length %> matchs</span></div>
   <div class="match-list compact">
     <% matches.forEach((match) => { %>
-      <div class="match-row">
+      <div class="match-row admin-match-row">
         <div>
           <span class="tag"><%= match.round_label %></span>
           <strong><%= match.team_a_name || match.source_a_text %></strong>
@@ -69,6 +69,11 @@
           <small>Match <%= match.match_no %> · <%= match.kickoff_label %></small>
         </div>
         <form method="post" action="<%= base %>/admin/results/<%= match.id %>" class="admin-result">
+          <select name="status">
+            <option value="scheduled" <%= match.status === "scheduled" ? "selected" : "" %>>À venir</option>
+            <option value="live" <%= match.status === "live" ? "selected" : "" %>>En cours</option>
+            <option value="final" <%= match.status === "final" ? "selected" : "" %>>Terminé</option>
+          </select>
           <select name="score_a"><% for (let i = 0; i <= 10; i++) { %><option value="<%= i %>" <%= match.score_a === i ? "selected" : "" %>><%= i %></option><% } %></select>
           <span>-</span>
           <select name="score_b"><% for (let i = 0; i <= 10; i++) { %><option value="<%= i %>" <%= match.score_b === i ? "selected" : "" %>><%= i %></option><% } %></select>
@@ -81,7 +86,7 @@
           <% } %>
           <button class="btn small" type="submit"><i data-lucide="check"></i>OK</button>
         </form>
-        <% if (match.status === "final") { %>
+        <% if (match.status !== "scheduled") { %>
           <form method="post" action="<%= base %>/admin/results/<%= match.id %>/clear"><button class="ghost danger" title="Annuler"><i data-lucide="x"></i></button></form>
         <% } %>
       </div>

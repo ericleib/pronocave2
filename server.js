@@ -188,10 +188,18 @@ app.get("/", requireAuth, (req, res) => res.redirect(targetUrl(req)));
 
 app.get("/:slug", requireAuth, (req, res) => {
   const tournament = res.locals.tournament;
+  const matches = withMatchStats(
+    store.matchesForTournament(tournament.id),
+    store.betsForTournament(tournament.id),
+    req.session.userId,
+  );
   res.render("dashboard", {
     leaderboard: store.leaderboard(tournament.id).map((row) => ({ ...row, pronosPath: playerPronosPath(tournament, row.id) })),
     stats: store.stats(tournament.id),
     messages: store.messages(tournament.id),
+    liveMatches: matches
+      .filter((match) => match.status === "live")
+      .sort((a, b) => new Date(a.kickoff_utc || 0) - new Date(b.kickoff_utc || 0)),
   });
 });
 
@@ -394,8 +402,11 @@ app.get("/:slug/matches", requireAuth, (req, res) => {
     finishedMatches: matches
       .filter((match) => match.status === "final")
       .sort((a, b) => new Date(b.kickoff_utc || 0) - new Date(a.kickoff_utc || 0)),
+    liveMatches: matches
+      .filter((match) => match.status === "live")
+      .sort((a, b) => new Date(a.kickoff_utc || 0) - new Date(b.kickoff_utc || 0)),
     upcomingMatches: matches
-      .filter((match) => match.status !== "final")
+      .filter((match) => match.status === "scheduled")
       .sort((a, b) => new Date(a.kickoff_utc || 0) - new Date(b.kickoff_utc || 0)),
   });
 });
@@ -438,13 +449,18 @@ app.post("/:slug/admin/teams/:matchId/:side", requireAdmin, (req, res) => {
 });
 
 app.post("/:slug/admin/results/:matchId", requireAdmin, (req, res) => {
-  store.saveResult({
-    matchId: Number(req.params.matchId),
-    scoreA: Number(req.body.score_a),
-    scoreB: Number(req.body.score_b),
-    winnerTeamId: Number(req.body.winner_team_id) || null,
-  });
-  flash(req, "success", "Résultat enregistré.");
+  try {
+    store.saveResult({
+      matchId: Number(req.params.matchId),
+      status: req.body.status,
+      scoreA: parseScore(req.body.score_a),
+      scoreB: parseScore(req.body.score_b),
+      winnerTeamId: Number(req.body.winner_team_id) || null,
+    });
+    flash(req, "success", "Résultat enregistré.");
+  } catch (error) {
+    flash(req, "error", error.message);
+  }
   res.redirect(`${targetUrl(req, "/admin")}#results`);
 });
 
