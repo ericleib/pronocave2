@@ -329,6 +329,18 @@ function createUser({ login, password, email }) {
   return run("INSERT INTO users (login, password_hash, email) VALUES (?, ?, ?)", [login, hashPassword(password), email]);
 }
 
+function users() {
+  return all("SELECT id, login, role FROM users ORDER BY login COLLATE NOCASE");
+}
+
+function renameUser(userId, login) {
+  const nextLogin = String(login || "").trim();
+  if (!nextLogin) throw new Error("Nom manquant.");
+  const duplicate = get("SELECT id FROM users WHERE lower(login) = lower(?) AND id != ?", [nextLogin, userId]);
+  if (duplicate) throw new Error("Ce nom est déjà utilisé.");
+  return run("UPDATE users SET login = ? WHERE id = ?", [nextLogin, userId]);
+}
+
 function teamsForTournament(tournamentId) {
   return all("SELECT * FROM teams WHERE tournament_id = ? ORDER BY group_code, name", [tournamentId]);
 }
@@ -379,6 +391,7 @@ function betByMatchNo(tournamentId, userId, matchNo) {
 function leaderboard(tournamentId) {
   return all(
     `SELECT u.id, u.login,
+            COUNT(b.id) AS bet_count,
             COALESCE(SUM(CASE WHEN b.points IS NOT NULL THEN b.points ELSE 0 END), 0) AS score,
             COALESCE(SUM(CASE
               WHEN m.round = 'group' AND b.points = 3 THEN 1
@@ -680,6 +693,8 @@ module.exports = {
   userByLogin,
   userById,
   createUser,
+  users,
+  renameUser,
   teamsForTournament,
   matchesForTournament,
   betFor,

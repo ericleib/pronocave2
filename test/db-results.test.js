@@ -83,6 +83,36 @@ test("saveResult stores live results and recomputes provisional leaderboard poin
   assert.equal(store.leaderboard(tournamentId).find((row) => row.id === userId).score, 3);
 });
 
+test("leaderboard exposes bet counts so inactive users can be hidden after phase zero", () => {
+  const tournamentId = createTournament();
+  const teamA = createTeam(tournamentId, "France");
+  const teamB = createTeam(tournamentId, "Mexique");
+  const matchId = createMatch(tournamentId, {
+    matchNo: 5,
+    round: "group",
+    teamAId: teamA,
+    teamBId: teamB,
+  });
+  const activeUserId = createUser("active-better");
+  const inactiveUserId = createUser("inactive-better");
+  const match = store.get("SELECT * FROM matches WHERE id = ?", [matchId]);
+
+  store.saveBet({ tournamentId, match, userId: activeUserId, scoreA: 1, scoreB: 0, teamAId: teamA, teamBId: teamB });
+  const rows = store.leaderboard(tournamentId);
+
+  assert.equal(rows.find((row) => row.id === activeUserId).bet_count, 1);
+  assert.equal(rows.find((row) => row.id === inactiveUserId).bet_count, 0);
+});
+
+test("renameUser changes display names and rejects duplicates", () => {
+  const firstUserId = createUser("rename-source");
+  createUser("rename-target");
+
+  store.renameUser(firstUserId, "Renamed Player");
+  assert.equal(store.userById(firstUserId).login, "Renamed Player");
+  assert.throws(() => store.renameUser(firstUserId, "rename-target"), /déjà utilisé/);
+});
+
 test("changing a final knockout winner clears dependent results and propagates the new team", () => {
   const tournamentId = createTournament();
   const teamA = createTeam(tournamentId, "France");

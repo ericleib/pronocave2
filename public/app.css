@@ -731,40 +731,79 @@ textarea {
 .message-form {
   display: grid;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.message-form textarea {
+  background: white;
 }
 
 .message-list {
   display: grid;
-  gap: 12px;
+  gap: 22px;
+}
+
+.message-item {
+  display: grid;
+  gap: 6px;
 }
 
 .message-card {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-soft);
-  overflow: hidden;
-}
-
-.message-card p {
-  margin: 0;
-  padding: 14px;
-}
-
-.message-card img {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
-.message-card footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  border-top: 1px solid var(--line);
   background: white;
-  padding: 9px 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.message-meta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.message-meta > span {
+  text-align: right;
+}
+
+.message-action {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 4px 7px;
+  color: var(--muted);
+}
+
+.message-action span {
+  min-width: 1ch;
+  font-weight: 800;
+}
+
+.message-body {
+  margin: 0;
+  padding: 16px;
+  color: var(--text);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.message-image {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  border-top: 1px solid var(--line);
+  background: #f8fafc;
 }
 
 .live-score-list {
@@ -847,6 +886,24 @@ textarea {
   gap: 7px;
   justify-content: end;
   min-width: 0;
+}
+
+.admin-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-inline-form select {
+  min-width: 160px;
+  width: auto;
+}
+
+.admin-inline-form input {
+  min-width: 180px;
+  width: auto;
+  flex: 1;
 }
 
 @media (max-width: 900px) {

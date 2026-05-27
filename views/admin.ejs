@@ -21,6 +21,16 @@
     </select>
     <button class="btn" type="submit"><i data-lucide="repeat"></i>Activer</button>
   </form>
+  <form class="panel form-stack" method="post" action="<%= base %>/admin/users/rename" id="users">
+    <h2>Joueurs</h2>
+    <div class="admin-inline-form">
+      <select name="user_id">
+        <% users.forEach((user) => { %><option value="<%= user.id %>"><%= user.login %></option><% }) %>
+      </select>
+      <input name="login" type="text" placeholder="Nouveau nom" required>
+      <button class="btn" type="submit"><i data-lucide="check"></i>OK</button>
+    </div>
+  </form>
 </section>
 
 <section class="panel" id="teams">

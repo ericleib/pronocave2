@@ -194,8 +194,12 @@ app.get("/:slug", requireAuth, (req, res) => {
     store.betsForTournament(tournament.id),
     req.session.userId,
   );
+  const leaderboard = store
+    .leaderboard(tournament.id)
+    .filter((row) => tournament.phase === 0 || row.bet_count > 0)
+    .map((row) => ({ ...row, pronosPath: playerPronosPath(tournament, row.id) }));
   res.render("dashboard", {
-    leaderboard: store.leaderboard(tournament.id).map((row) => ({ ...row, pronosPath: playerPronosPath(tournament, row.id) })),
+    leaderboard,
     stats: store.stats(tournament.id),
     messages: store.messages(tournament.id),
     liveMatches: matches
@@ -422,6 +426,7 @@ app.get("/:slug/admin", requireAdmin, (req, res) => {
   res.render("admin", {
     matches: store.matchesForTournament(tournament.id),
     teams: store.teamsForTournament(tournament.id),
+    users: store.users(),
   });
 });
 
@@ -437,6 +442,16 @@ app.post("/:slug/admin/active", requireAdmin, (req, res) => {
   req.session.tournamentSlug = store.get("SELECT slug FROM tournaments WHERE id = ?", [req.body.tournament_id])?.slug;
   flash(req, "success", "Tournoi actif mis à jour.");
   res.redirect(targetUrl(req, "/admin"));
+});
+
+app.post("/:slug/admin/users/rename", requireAdmin, (req, res) => {
+  try {
+    store.renameUser(Number(req.body.user_id), req.body.login);
+    flash(req, "success", "Joueur renommé.");
+  } catch (error) {
+    flash(req, "error", error.message);
+  }
+  res.redirect(`${targetUrl(req, "/admin")}#users`);
 });
 
 app.post("/:slug/admin/teams/:matchId/:side", requireAdmin, (req, res) => {

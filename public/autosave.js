@@ -54,9 +54,49 @@
     }
   }
 
+  function editableInputs(row) {
+    return [...row.querySelectorAll("select, input[type='hidden']")].filter((input) => input.name);
+  }
+
+  function captureDrafts(board) {
+    const drafts = new Map();
+    const active = document.activeElement;
+    let focused = null;
+    for (const row of board.querySelectorAll(".autosave-row[data-save-url]")) {
+      const fields = editableInputs(row).map((input) => ({ name: input.name, value: input.value }));
+      drafts.set(row.dataset.saveUrl, fields);
+      if (row.contains(active) && active.name) {
+        focused = { saveUrl: row.dataset.saveUrl, name: active.name };
+      }
+    }
+    return { drafts, focused };
+  }
+
+  function restoreDrafts(board, snapshot) {
+    if (!snapshot) return;
+    for (const row of board.querySelectorAll(".autosave-row[data-save-url]")) {
+      const fields = snapshot.drafts.get(row.dataset.saveUrl);
+      if (!fields) continue;
+      for (const field of fields) {
+        const input = editableInputs(row).find((item) => item.name === field.name);
+        if (input) input.value = field.value;
+      }
+      syncTieWinner(row);
+    }
+    if (snapshot.focused) {
+      const row = [...board.querySelectorAll(".autosave-row[data-save-url]")].find(
+        (item) => item.dataset.saveUrl === snapshot.focused.saveUrl,
+      );
+      editableInputs(row || document.createElement("div"))
+        .find((input) => input.name === snapshot.focused.name)
+        ?.focus();
+    }
+  }
+
   async function refreshBoard() {
     const board = document.querySelector("#pronos-board");
     if (!board) return;
+    const snapshot = captureDrafts(board);
     const response = await fetch(board.dataset.refreshUrl || window.location.href, {
       headers: { "X-Requested-With": "fetch" },
     });
@@ -65,6 +105,7 @@
     const next = new DOMParser().parseFromString(html, "text/html").querySelector("#pronos-board");
     if (!next) return;
     board.replaceWith(next);
+    restoreDrafts(next, snapshot);
     initAutosave(next);
     window.lucide?.createIcons();
   }

@@ -2,7 +2,7 @@
 <section class="page-title">
   <div>
     <p class="eyebrow"><%= phaseLabel(tournament.phase) %></p>
-    <h1>Salut <%= currentUser.login %></h1>
+    <h1>Classement</h1>
   </div>
   <div class="quick-stats">
     <span><strong><%= stats.users %></strong> joueurs</span>
@@ -80,19 +80,21 @@
   </form>
   <div class="message-list">
     <% messages.forEach((message) => { %>
-      <article class="message-card">
-        <% if (message.body) { %><p><%- escapeHtml(message.body).replace(/\n/g, "<br>") %></p><% } %>
-        <% if (message.image_path) { %><img src="<%= message.image_path %>" alt=""><% } %>
-        <footer>
-          <span><strong><%= message.login %></strong> · <%= formatDate(message.created_at) %></span>
+      <div class="message-item">
+        <article class="message-card">
+          <% if (message.body) { %><p class="message-body"><%- escapeHtml(message.body).replace(/\n/g, "<br>") %></p><% } %>
+          <% if (message.image_path) { %><img class="message-image" src="<%= message.image_path %>" alt=""><% } %>
+        </article>
+        <div class="message-meta">
+          <span><%= message.login %> · <%= formatDate(message.created_at) %></span>
           <div class="inline-actions">
-            <form method="post" action="/messages/<%= message.id %>/like"><button class="ghost" title="Like"><i data-lucide="thumbs-up"></i><%= message.likes || "" %></button></form>
+            <form method="post" action="/messages/<%= message.id %>/like"><button class="ghost message-action" title="Like"><i data-lucide="thumbs-up"></i><span><%= message.likes || 0 %></span></button></form>
             <% if (message.user_id === currentUser.id || currentUser.role === "admin") { %>
-              <form method="post" action="/messages/<%= message.id %>/delete"><button class="ghost danger" title="Supprimer"><i data-lucide="trash-2"></i></button></form>
+              <form method="post" action="/messages/<%= message.id %>/delete"><button class="ghost danger message-action" title="Supprimer"><i data-lucide="trash-2"></i></button></form>
             <% } %>
           </div>
-        </footer>
-      </article>
+        </div>
+      </div>
     <% }) %>
   </div>
 </section>
