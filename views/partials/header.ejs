@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title ? `${title} - Pronocave` : "Pronocave" %></title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <div class="shell header-grid">
+    <a class="brand" href="<%= base || "/" %>">
+      <span class="brand-mark"><i data-lucide="wine"></i></span>
+      <span><strong>Pronocave</strong><small><%= tournament?.short_name || "" %></small></span>
+    </a>
+    <% if (currentUser) { %>
+      <nav class="main-nav">
+        <a class="<%= sectionPath === "/" ? "active" : "" %>" href="<%= base %>"><i data-lucide="trophy"></i><span>Accueil</span></a>
+        <a class="rules-link <%= sectionPath === "/rules" ? "active" : "" %>" href="<%= base %>/rules"><i data-lucide="book-open"></i><span>Règles</span></a>
+        <a class="<%= sectionPath.startsWith("/bets") ? "active" : "" %>" href="<%= base %>/pronos"><i data-lucide="grid-3x3"></i><span>Pronos</span></a>
+        <a class="<%= sectionPath === "/matches" ? "active" : "" %>" href="<%= base %>/matches"><i data-lucide="calendar-days"></i><span>Matchs</span></a>
+        <% if (currentUser.role === "admin") { %>
+          <a class="<%= sectionPath === "/admin" ? "active" : "" %>" href="<%= base %>/admin"><i data-lucide="settings"></i><span>Admin</span></a>
+        <% } %>
+      </nav>
+      <div class="user-tools">
+        <form>
+          <select name="t" onchange="window.location.href='/' + this.value + '<%= sectionPath === "/" ? "" : sectionPath %>'" aria-label="Tournoi">
+            <% tournaments.forEach((item) => { %>
+              <option value="<%= item.slug %>" <%= item.id === tournament.id ? "selected" : "" %>><%= item.short_name %></option>
+            <% }) %>
+          </select>
+        </form>
+        <a class="icon-link" href="/logout" title="Déconnexion"><i data-lucide="log-out"></i></a>
+      </div>
+    <% } %>
+  </div>
+</header>
+<main class="shell">
+  <% if (flash) { %>
+    <div class="flash <%= flash.type %>"><%= flash.text %></div>
+  <% } %>

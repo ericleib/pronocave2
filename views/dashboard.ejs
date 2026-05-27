@@ -1,0 +1,79 @@
+<%- include("partials/header", { title: "Accueil" }) %>
+<section class="page-title">
+  <div>
+    <p class="eyebrow"><%= phaseLabel(tournament.phase) %></p>
+    <h1>Salut <%= currentUser.login %></h1>
+  </div>
+  <div class="quick-stats">
+    <span><strong><%= stats.users %></strong> joueurs</span>
+    <span><strong><%= stats.bets %></strong> pronos</span>
+    <span><strong><%= stats.done %></strong> terminés</span>
+    <span><strong><%= stats.upcoming %></strong> a venir</span>
+  </div>
+</section>
+
+<section class="dashboard-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Classement</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Nom</th><th>Score</th><th>Bonus</th></tr></thead>
+        <tbody>
+        <% let prev = null, rank = 0, shown = 0; leaderboard.forEach((row) => { shown += 1; if (row.score !== prev) rank = shown; prev = row.score; %>
+          <tr class="<%= row.id === currentUser.id ? "is-me" : "" %>">
+            <td><%= rank %></td>
+            <td>
+              <% if (row.pronosPath) { %><a href="<%= row.pronosPath %>"><%= row.login %></a><% } else { %><%= row.login %><% } %>
+            </td>
+            <td><%= row.score %></td><td><%= row.bonus %></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <h2>Tournoi</h2>
+    <dl class="meta-list">
+      <dt>Événement</dt><dd><%= tournament.name %></dd>
+      <dt>Phase</dt><dd><%= phaseLabel(tournament.phase) %></dd>
+      <dt>Groupes</dt><dd><%= formatDate(tournament.group_bet_deadline) %></dd>
+      <dt>Finales</dt><dd><%= formatDate(tournament.knockout_bet_deadline) %></dd>
+    </dl>
+  </aside>
+</section>
+
+<section class="panel messages" id="messages">
+  <div class="panel-head">
+    <h2>Messages</h2>
+    <span class="muted"><%= stats.messages %> <%= stats.messages > 1 ? "messages" : "message" %></span>
+  </div>
+  <form class="message-form" method="post" action="/messages" enctype="multipart/form-data">
+    <textarea name="message" rows="3" placeholder="Écrire un message"></textarea>
+    <div class="form-row">
+      <input type="file" name="photo" accept="image/*">
+      <button class="btn primary" type="submit"><i data-lucide="send"></i>Publier</button>
+    </div>
+  </form>
+  <div class="message-list">
+    <% messages.forEach((message) => { %>
+      <article class="message-card">
+        <% if (message.body) { %><p><%- escapeHtml(message.body).replace(/\n/g, "<br>") %></p><% } %>
+        <% if (message.image_path) { %><img src="<%= message.image_path %>" alt=""><% } %>
+        <footer>
+          <span><strong><%= message.login %></strong> · <%= formatDate(message.created_at) %></span>
+          <div class="inline-actions">
+            <form method="post" action="/messages/<%= message.id %>/like"><button class="ghost" title="Like"><i data-lucide="thumbs-up"></i><%= message.likes || "" %></button></form>
+            <% if (message.user_id === currentUser.id || currentUser.role === "admin") { %>
+              <form method="post" action="/messages/<%= message.id %>/delete"><button class="ghost danger" title="Supprimer"><i data-lucide="trash-2"></i></button></form>
+            <% } %>
+          </div>
+        </footer>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<%- include("partials/footer") %>

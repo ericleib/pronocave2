@@ -1,0 +1,77 @@
+<%- include("partials/header", { title: viewedUser ? `Pronos finales - ${viewedUser.login}` : "Pronos finales" }) %>
+<% const isReadonly = Boolean(readonly); %>
+<section class="page-title">
+  <div>
+    <p class="eyebrow"><%= viewedUser ? viewedUser.login : "Bracket" %></p>
+    <h1>Pronostics des Finales</h1>
+  </div>
+  <div class="title-actions">
+    <% if (isReadonly) { %><span class="status-pill locked">Verrouillé</span><% } else { %><span class="status-pill open">Ouvert</span><% } %>
+    <% if (otherStagePath) { %><a class="btn small" href="<%= otherStagePath %>"><i data-lucide="grid-3x3"></i>Groupes</a><% } %>
+  </div>
+</section>
+
+<div id="pronos-board" <%- isReadonly ? "" : `data-refresh-url="${base}/bets/knockout"` %>>
+  <% ["round32", "round16", "quarter", "semi", "third_place", "final"].forEach((round) => { if (rounds[round]) { %>
+    <section class="panel bracket-section">
+      <h2><%= labels[round] %></h2>
+      <div class="bracket-grid">
+        <% rounds[round].forEach((match) => { %>
+          <article class="bet-card" id="match-<%= match.match_no %>">
+            <header><small>Match <%= match.match_no %> · <%= match.kickoff_label %> · <%= match.venue %></small></header>
+            <% if (match.needsChoice && !isReadonly) { %>
+              <div class="finales-card autosave-row" data-save-url="<%= base %>/bets/winners/<%= match.choiceSource.match_no %>" data-refresh-on-save="true">
+                <strong><%= match.choiceTeams[0]?.name %></strong>
+                <select name="winner_team_id" required>
+                  <option value="">Qualifié</option>
+                  <% match.choiceTeams.forEach((team) => { if (team) { %>
+                    <option value="<%= team.id %>"><%= team.name %></option>
+                  <% } }) %>
+                </select>
+                <strong><%= match.choiceTeams[1]?.name %></strong>
+                <span class="save-state" aria-live="polite"></span>
+              </div>
+            <% } else if (match.blocked || match.needsChoice) { %>
+              <div class="finales-card locked-card">
+                <strong><%= match.teamAName || match.source_a_text %></strong>
+                <span class="muted">Équipes à confirmer</span>
+                <strong><%= match.teamBName || match.source_b_text %></strong>
+              </div>
+            <% } else { %>
+              <div class="finales-card <%= isReadonly ? "" : "autosave-row" %>" <%- isReadonly ? "" : `data-save-url="${base}/bets/knockout/${match.id}"` %>>
+                <strong class="<%= match.teamAMismatch ? "mismatch" : "" %>"><%= match.teamAName %></strong>
+                <% if (isReadonly && !match.bet) { %>
+                  <span class="muted no-bet">Pas de prono</span>
+                <% } else { %>
+                  <select name="score_a" required <%= isReadonly ? "disabled" : "" %>>
+                    <option value="" <%= match.bet?.score_a === undefined || match.bet?.score_a === null ? "selected" : "" %>></option>
+                    <% scores.forEach((score) => { %><option value="<%= score %>" <%= match.bet?.score_a === score ? "selected" : "" %>><%= score %></option><% }) %>
+                  </select>
+                  <select name="score_b" required <%= isReadonly ? "disabled" : "" %>>
+                    <option value="" <%= match.bet?.score_b === undefined || match.bet?.score_b === null ? "selected" : "" %>></option>
+                    <% scores.forEach((score) => { %><option value="<%= score %>" <%= match.bet?.score_b === score ? "selected" : "" %>><%= score %></option><% }) %>
+                  </select>
+                <% } %>
+                <strong class="<%= match.teamBMismatch ? "mismatch" : "" %>"><%= match.teamBName %></strong>
+                <% if (!isReadonly || match.bet) { %>
+                  <label class="tie-winner <%= match.bet?.score_a === match.bet?.score_b && match.bet?.score_a !== undefined && match.bet?.score_a !== null ? "" : "is-hidden" %>">
+                    <span>Qualifié</span>
+                    <select name="winner_team_id" <%= isReadonly ? "disabled" : "" %>>
+                      <option value="">Vainqueur</option>
+                      <option value="<%= match.teamAId %>" <%= Number(match.betWinnerTeamId) === Number(match.teamAId) ? "selected" : "" %>><%= match.teamAName %></option>
+                      <option value="<%= match.teamBId %>" <%= Number(match.betWinnerTeamId) === Number(match.teamBId) ? "selected" : "" %>><%= match.teamBName %></option>
+                    </select>
+                  </label>
+                <% } %>
+                <% if (match.bet?.points !== null && match.bet?.points !== undefined) { %><em><%= match.bet.points %> pts</em><% } %>
+                <% if (!isReadonly) { %><span class="save-state" aria-live="polite"></span><% } %>
+              </div>
+            <% } %>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+  <% } }) %>
+</div>
+<% if (!isReadonly) { %><script src="/autosave.js"></script><% } %>
+<%- include("partials/footer") %>

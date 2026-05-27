@@ -1,0 +1,46 @@
+<%- include("partials/header", { title: viewedUser ? `Pronos groupes - ${viewedUser.login}` : "Pronos groupes" }) %>
+<% const isReadonly = Boolean(readonly); %>
+<section class="page-title">
+  <div>
+    <p class="eyebrow"><%= viewedUser ? viewedUser.login : "Phase de groupes" %></p>
+    <h1>Pronostics des groupes</h1>
+  </div>
+  <div class="title-actions">
+    <% if (isReadonly) { %><span class="status-pill locked">Verrouillé</span><% } else { %><span class="status-pill open">Ouvert</span><% } %>
+    <% if (otherStagePath) { %><a class="btn small" href="<%= otherStagePath %>"><i data-lucide="grid-3x3"></i>Finales</a><% } %>
+  </div>
+</section>
+
+<div class="stack">
+  <% Object.keys(groups).sort().forEach((group) => { %>
+    <section class="panel bracket-section">
+      <div class="panel-head"><h2>Groupe <%= group %></h2><span><%= groups[group].length %> matchs</span></div>
+      <div class="bracket-grid">
+        <% groups[group].forEach((match) => { const bet = bets.get(match.id); %>
+          <article class="bet-card <%= isReadonly ? "" : "autosave-row" %> group-bet-row" <%- isReadonly ? "" : `data-save-url="${base}/bets/groups/${match.id}"` %>>
+            <header><small>Match <%= match.match_no %> · <%= match.kickoff_label %> · <%= match.venue %></small></header>
+            <div class="group-card">
+              <strong><%= match.team_a_name %></strong>
+              <% if (isReadonly && !bet) { %>
+                <span class="muted no-bet">Pas de prono</span>
+              <% } else { %>
+                <select name="score_a" required <%= isReadonly ? "disabled" : "" %>>
+                  <option value="" <%= bet?.score_a === undefined || bet?.score_a === null ? "selected" : "" %>></option>
+                  <% scores.forEach((score) => { %><option value="<%= score %>" <%= bet?.score_a === score ? "selected" : "" %>><%= score %></option><% }) %>
+                </select>
+                <select name="score_b" required <%= isReadonly ? "disabled" : "" %>>
+                  <option value="" <%= bet?.score_b === undefined || bet?.score_b === null ? "selected" : "" %>></option>
+                  <% scores.forEach((score) => { %><option value="<%= score %>" <%= bet?.score_b === score ? "selected" : "" %>><%= score %></option><% }) %>
+                </select>
+              <% } %>
+              <strong><%= match.team_b_name %></strong>
+              <% if (!isReadonly) { %><span class="save-state" aria-live="polite"></span><% } %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+  <% }) %>
+</div>
+<% if (!isReadonly) { %><script src="/autosave.js"></script><% } %>
+<%- include("partials/footer") %>

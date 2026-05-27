@@ -1,0 +1,15 @@
+<%- include("partials/header", { title: "Connexion" }) %>
+<section class="auth-panel">
+  <div>
+    <p class="eyebrow">Cave ouverte</p>
+    <h1>Vos papiers, s'il vous plait.</h1>
+    <p class="muted">Connecte-toi pour poser tes pronos, suivre le classement et chambrer sobrement.</p>
+  </div>
+  <form class="panel form-stack" method="post" action="/login">
+    <label>Nom d'utilisateur<input name="login" autocomplete="username" required></label>
+    <label>Mot de passe<input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="btn primary" type="submit"><i data-lucide="log-in"></i>Valider</button>
+    <a href="/signup">Créer un nouveau compte</a>
+  </form>
+</section>
+<%- include("partials/footer") %>

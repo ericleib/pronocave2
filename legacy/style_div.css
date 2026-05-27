@@ -1,0 +1,122 @@
+@media (min-width:970px) and (max-width: 2500px) {
+    .container {
+     width:970px;
+    }   
+}
+@media (min-width: 768px){	
+	.navbar-nav{
+		margin: 0 auto;
+		display: table;
+		table-layout: fixed;
+		float:none;
+	}
+}  
+.navbar {
+	font-size: 1.3em;
+}
+
+.dropdown-menu > li > a {
+    text-align:center;
+	font-size: 1.3em;
+}
+
+.navbar-nav .open .dropdown-menu>li>a {
+	padding: 5px 15px 5px 15px; !important
+}
+
+.table td,th {
+   text-align: center;   
+}
+  
+body
+{
+text-align: center ;
+background-image:url('https://cdn.rawgit.com/ericleib/pronocave/master/background.jpg');
+}
+
+.top-container{
+border: 2px solid #9db84f ;
+border-radius: 10px;
+background: #FFFFFF;
+overflow: hidden;
+padding: 0;
+box-shadow: 0px 0px 30px -5px rgba(0, 0, 0, 0.7);
+}
+
+.message{
+margin: 1em 0;
+}
+
+.header {
+   position: relative;
+}
+
+.header img{
+   max-width:150%;
+}
+
+.header h1 { 
+   position: absolute; 
+   top: 75px; 
+   left: 0; 
+   width: 100%; 
+   margin: 0;
+   -ms-transform: rotate(-5deg); /* IE 9 */
+   -webkit-transform: rotate(-5deg); /* Chrome, Safari, Opera */
+   transform: rotate(-5deg);
+}
+
+.header h1 span.wrapper { 
+   color: white;
+   font: bold 80px/90px Helvetica, Sans-Serif; 
+   font-family: 'Passion One', cursive;
+   background: rgb(0, 0, 0); /* fallback color */
+   background: rgba(0, 0, 0, 0.8);
+   padding: 0 0.2em; 
+   border-radius: 0.1em;
+   line-height: 1.5;
+}
+
+
+@media only screen and (max-width: 970px) {
+   .header h1 { top: 60px; }
+   .header h1 span.wrapper { font-size: 60px; }
+}
+
+@media only screen and (max-width: 750px) {
+   .header h1 { top: 45px; }
+   .header h1 span.wrapper { font-size: 45px; }
+}
+
+@media only screen and (max-width: 450px) {
+   .header h1 { top: 30px; }
+   .header h1 span.wrapper { font-size: 35px; }
+}
+
+@media only screen and (max-width: 300px) {
+   .header h1 { top: 10px; }
+   .header h1 span.wrapper { font-size: 25px; }
+}
+
+.margin_down{
+	margin-bottom: 2em;
+}
+
+.bet {
+	min-height:210px;
+}
+
+.bet-btn {
+	position:absolute; 
+	bottom: 10px;
+	width: 100px;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;;
+}
+
+.btn-msg{
+    position: relative;
+	top: -5px;
+}

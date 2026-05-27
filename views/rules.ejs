@@ -1,0 +1,30 @@
+<%- include("partials/header", { title: "Règles" }) %>
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Barème</p>
+    <h1>Règles</h1>
+  </div>
+</section>
+
+<section class="panel rules">
+  <h2>Phase de groupes</h2>
+  <ul>
+    <li><strong>3 points</strong> pour le score exact.</li>
+    <li><strong>2 points</strong> pour le bon résultat sans score exact : victoire A, nul, ou victoire B.</li>
+    <li><strong>0 point</strong> sinon.</li>
+  </ul>
+
+  <h2>Finales</h2>
+  <ul>
+    <li><strong>3 points</strong> pour le bon vainqueur.</li>
+    <li><strong>+2 points</strong> si les deux équipes du match sont correctement prédites, sauf pour la finale.</li>
+    <li><strong>+2 points</strong> de plus pour le score exact, sauf pour la finale.</li>
+    <li><strong>Finale :</strong> 7 points pour le champion, +5 points pour les deux finalistes exacts, +5 points pour le score exact.</li>
+    <li>En finales, les équipes doivent être confirmées par l'admin avant que le match soit pronostiquable.</li>
+    <li>Tu peux entrer un score nul en finales. Dans ce cas, tu ne pronostiques pas le qualifié : si le vrai match est aussi nul avec les bonnes équipes, tu marques <strong>2 points</strong>, plus <strong>2 points</strong> si le score exact est bon.</li>
+  </ul>
+
+  <h2>Bonus</h2>
+  <p>Le bonus affiché dans le classement compte les très bons pronos : score exact en groupes, au moins 5 points en seizièmes, et au moins 7 points à partir des tours suivants.</p>
+</section>
+<%- include("partials/footer") %>

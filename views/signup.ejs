@@ -1,0 +1,16 @@
+<%- include("partials/header", { title: "Nouveau compte" }) %>
+<section class="auth-panel">
+  <div>
+    <p class="eyebrow">Nouvelle bouteille</p>
+    <h1>Choisis tes identifiants</h1>
+    <p class="muted">Un seul compte par personne. Le mot de passe doit contenir au moins 6 caractères.</p>
+  </div>
+  <form class="panel form-stack" method="post" action="/signup">
+    <label>Nom d'utilisateur<input name="login" autocomplete="username" required></label>
+    <label>Email<input type="email" name="email" autocomplete="email"></label>
+    <label>Mot de passe<input type="password" name="password" autocomplete="new-password" required></label>
+    <button class="btn primary" type="submit"><i data-lucide="user-plus"></i>Créer le compte</button>
+    <a href="/login">Retour à la connexion</a>
+  </form>
+</section>
+<%- include("partials/footer") %>
