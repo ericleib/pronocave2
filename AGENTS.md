@@ -398,6 +398,28 @@ Finals:
 
 Only `live` and `final` matches produce points. `scheduled` matches leave `bets.points` as `NULL`. This lets admins update live scores in real time and see the leaderboard move without making the bracket consume provisional winners.
 
+## Automatic Score Sync
+
+`src/scoreSync.js` runs a background sync from TheSportsDB when `server.js` starts.
+
+Environment:
+
+- `SCORE_SYNC_ENABLED=0` disables the job.
+- `SCORE_SYNC_INTERVAL_MS` overrides the default 60 second interval.
+- `THESPORTSDB_API_KEY` overrides the public free v1 key (`123`).
+
+The job only checks candidate matches from `store.scoreSyncCandidates()`:
+
+- scheduled matches starting soon or recently started;
+- currently live matches;
+- recently final matches, so provider corrections can still flow through.
+
+It queries one candidate match at a time with TheSportsDB v1 `searchevents.php` or `lookupevent.php` once an external ID is known. Keep this conservative because the free API is rate-limited.
+
+All provider updates must go through `store.saveResult()`. This is deliberate: points, live leaderboard totals, final bracket propagation, and downstream cleanup stay in one code path.
+
+Do not guess tied knockout winners. If TheSportsDB reports a final tied score and the result text does not clearly identify the qualified team, the sync skips that final update and leaves the admin to set it manually.
+
 ## Autosave Betting UI
 
 Group and finals betting pages use autosave, not submit buttons.

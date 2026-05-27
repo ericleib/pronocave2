@@ -127,6 +127,10 @@ function migrate() {
     CREATE INDEX IF NOT EXISTS idx_matches_tournament_round ON matches(tournament_id, round, match_no);
     CREATE INDEX IF NOT EXISTS idx_bets_user_tournament ON bets(user_id, tournament_id);
   `);
+  addColumnIfMissing("teams", "source_name", "TEXT");
+  addColumnIfMissing("matches", "external_provider", "TEXT");
+  addColumnIfMissing("matches", "external_event_id", "TEXT");
+  addColumnIfMissing("matches", "external_last_sync", "TEXT");
   addColumnIfMissing("matches", "winner_team_id", "INTEGER REFERENCES teams(id)");
   addColumnIfMissing("bets", "winner_team_id", "INTEGER REFERENCES teams(id)");
 }
@@ -201,10 +205,11 @@ function seedWorldCup2026() {
 
     const teamIds = new Map();
     for (const team of seed.teams) {
-      const inserted = run("INSERT INTO teams (tournament_id, name, group_code) VALUES (?, ?, ?)", [
+      const inserted = run("INSERT INTO teams (tournament_id, name, group_code, source_name) VALUES (?, ?, ?, ?)", [
         tournamentId,
         team.name,
         team.group,
+        team.sourceName || team.name,
       ]);
       teamIds.set(team.name, Number(inserted.lastInsertRowid));
       if (team.sourceName) teamIds.set(team.sourceName, Number(inserted.lastInsertRowid));
@@ -273,9 +278,14 @@ function syncSeededTournament(tournamentId, seed) {
         tournamentId,
         team.group,
         team.sourceName || team.name,
-      ]);
+    ]);
     if (existing) {
-      run("UPDATE teams SET name = ?, group_code = ? WHERE id = ?", [team.name, team.group, existing.id]);
+      run("UPDATE teams SET name = ?, group_code = ?, source_name = ? WHERE id = ?", [
+        team.name,
+        team.group,
+        team.sourceName || team.name,
+        existing.id,
+      ]);
     }
   }
 
@@ -325,7 +335,9 @@ function teamsForTournament(tournamentId) {
 
 function matchesForTournament(tournamentId) {
   return all(
-    `SELECT m.*, ta.name AS team_a_name, tb.name AS team_b_name
+    `SELECT m.*,
+            ta.name AS team_a_name, tb.name AS team_b_name,
+            ta.source_name AS team_a_source_name, tb.source_name AS team_b_source_name
      FROM matches m
      LEFT JOIN teams ta ON ta.id = m.team_a_id
      LEFT JOIN teams tb ON tb.id = m.team_b_id
@@ -392,6 +404,31 @@ function stats(tournamentId) {
     upcoming: get("SELECT COUNT(*) AS n FROM matches WHERE tournament_id = ? AND status = 'scheduled'", [tournamentId]).n,
     messages: get("SELECT COUNT(*) AS n FROM messages WHERE tournament_id = ?", [tournamentId]).n,
   };
+}
+
+function scoreSyncCandidates(tournamentId, now = new Date()) {
+  const nowMs = now.getTime();
+  const lookAheadMs = 20 * 60 * 1000;
+  const liveLookBackMs = 6 * 60 * 60 * 1000;
+  const finalCorrectionMs = 24 * 60 * 60 * 1000;
+  return matchesForTournament(tournamentId).filter((match) => {
+    if (!match.team_a_id || !match.team_b_id) return false;
+    if (!match.kickoff_utc) return match.status === "live";
+    const kickoffMs = new Date(match.kickoff_utc).getTime();
+    if (Number.isNaN(kickoffMs)) return match.status === "live";
+    if (match.status === "live") return true;
+    if (match.status === "final") return nowMs - kickoffMs >= 0 && nowMs - kickoffMs <= finalCorrectionMs;
+    return kickoffMs <= nowMs + lookAheadMs && kickoffMs >= nowMs - liveLookBackMs;
+  });
+}
+
+function recordMatchExternalSync(matchId, { provider, eventId, syncedAt = new Date() }) {
+  run(
+    `UPDATE matches
+     SET external_provider = ?, external_event_id = COALESCE(?, external_event_id), external_last_sync = ?
+     WHERE id = ?`,
+    [provider, eventId || null, syncedAt.toISOString(), matchId],
+  );
 }
 
 function saveBet({ tournamentId, match, userId, scoreA, scoreB, teamAId, teamBId, winnerTeamId = null }) {
@@ -651,6 +688,8 @@ module.exports = {
   betByMatchNo,
   leaderboard,
   stats,
+  scoreSyncCandidates,
+  recordMatchExternalSync,
   saveBet,
   saveBetWinner,
   assignMatchTeam,

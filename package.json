@@ -7,7 +7,7 @@
     "seed:worldcup": "node scripts/build-worldcup-seed.mjs",
     "seed:translate": "node scripts/translate-worldcup-seed.mjs",
     "start": "node server.js",
-    "test": "node --check server.js && node --check src/db.js && node --check src/scoring.js && node --check src/passwords.js && node --check src/knockout.js && node --check src/matchStats.js && node --test"
+    "test": "node --check server.js && node --check src/db.js && node --check src/scoring.js && node --check src/passwords.js && node --check src/knockout.js && node --check src/matchStats.js && node --check src/scoreSync.js && node --test"
   },
   "keywords": [],
   "author": "",

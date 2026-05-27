@@ -7,6 +7,7 @@ const store = require("./src/db");
 const { SCORE_RANGE, betSyncPatches, buildKnockoutView, flattenedCards, groupBy } = require("./src/knockout");
 const { withMatchStats } = require("./src/matchStats");
 const { verifyPassword } = require("./src/passwords");
+const { startScoreSyncJob } = require("./src/scoreSync");
 
 store.initialize();
 
@@ -473,3 +474,4 @@ app.post("/:slug/admin/results/:matchId/clear", requireAdmin, (req, res) => {
 app.listen(PORT, () => {
   console.log(`Pronocave is running at http://localhost:${PORT}`);
 });
+startScoreSyncJob({ store });
